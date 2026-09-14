@@ -121,6 +121,29 @@ func TestValidatePayoutConditionalRequired(t *testing.T) {
 	}
 }
 
+// TestValidatePayoutIDRWallets pins the five IDR wallet payouts to their own typed
+// field: each is accepted under its field and rejected under another wallet's.
+func TestValidatePayoutIDRWallets(t *testing.T) {
+	extra := func(wallet string) *PayoutBankAccountContactExtra {
+		return &PayoutBankAccountContactExtra{BankCode: wallet, AccountName: "Budi", Email: "b@example.com", Mobile: "081234567890"}
+	}
+	for _, m := range []PayoutMethod{
+		{Code: "ID_DANA", IdDana: extra("DANA")},
+		{Code: "ID_OVO", IdOvo: extra("OVO")},
+		{Code: "ID_GOPAY", IdGopay: extra("GOPAY")},
+		{Code: "ID_LINKAJA", IdLinkaja: extra("LINKAJA")},
+		{Code: "ID_SHOPEEPAY", IdShopeepay: extra("SHOPEEPAY")},
+	} {
+		if err := validatePayoutMethod("IDR", m); err != nil {
+			t.Fatalf("%s: want accepted, got %v", m.Code, err)
+		}
+	}
+	wrong := PayoutMethod{Code: "ID_DANA", IdOvo: extra("OVO")}
+	if err := validatePayoutMethod("IDR", wrong); !errors.Is(err, ErrMethodExtraMismatch) {
+		t.Fatalf("wallet extra under another wallet's field: want ErrMethodExtraMismatch, got %v", err)
+	}
+}
+
 // TestValidateSeesSetExtra checks that validation, running on the serialized
 // shape, sees SetExtra payloads too.
 func TestValidateSeesSetExtra(t *testing.T) {

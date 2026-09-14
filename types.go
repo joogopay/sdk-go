@@ -273,6 +273,11 @@ type PayoutMethod struct {
 	BdBkash        *PayoutAccountContactExtra     `json:"bdBkash,omitempty"`
 	BdNagad        *PayoutAccountContactExtra     `json:"bdNagad,omitempty"`
 	IdBankTransfer *PayoutBankAccountContactExtra `json:"idBankTransfer,omitempty"`
+	IdDana         *PayoutBankAccountContactExtra `json:"idDana,omitempty"`
+	IdOvo          *PayoutBankAccountContactExtra `json:"idOvo,omitempty"`
+	IdGopay        *PayoutBankAccountContactExtra `json:"idGopay,omitempty"`
+	IdLinkaja      *PayoutBankAccountContactExtra `json:"idLinkaja,omitempty"`
+	IdShopeepay    *PayoutBankAccountContactExtra `json:"idShopeepay,omitempty"`
 	PhDfWallet     *PayoutBankAccountContactExtra `json:"phDfWallet,omitempty"`
 	PhDfBank       *PayoutBankAccountContactExtra `json:"phDfBank,omitempty"`
 	EWallet        *PayoutEWalletExtra            `json:"eWallet,omitempty"`

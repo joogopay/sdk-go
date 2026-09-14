@@ -2,6 +2,12 @@
 
 Versions follow SemVer. Tags are `vX.Y.Z` on this repository.
 
+## v0.2.0 — 2026-09-14
+
+- `PayoutMethod` gains typed `IdDana` / `IdOvo` / `IdGopay` / `IdLinkaja` /
+  `IdShopeepay` fields (`*PayoutBankAccountContactExtra`) for Indonesia wallet payouts.
+  The other language SDKs take the payout method as a map and need no change.
+
 ## v0.1.0 — 2026-09-14
 
 Initial public release.
