@@ -2,6 +2,17 @@
 
 Versions follow SemVer. Tags are `vX.Y.Z` on this repository.
 
+## v0.3.1 — 2026-09-18
+
+- Needs a platform that accepts an omitted or `null` ARS `address` (platform
+  release of 2026-09-18); against an earlier platform, send `address` as a string.
+- ARS `BANK_TRANSFER` payout `address` is optional. Omitted, `null` and empty
+  strings mean no address; non-empty strings are preserved. Other value types
+  are rejected before sending. The other eight recipient fields remain required,
+  and other currencies and methods retain their existing rules.
+- Empty typed `Address` values are omitted instead of forcing an ARS empty
+  string onto the wire. `SetExtra` preserves explicit `null` and empty strings.
+
 ## v0.3.0 — 2026-09-18
 
 - ARS payouts accept an empty `Address`. It is the only required field that may

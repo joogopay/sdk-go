@@ -85,7 +85,11 @@ your site does not confirm payment. Use order queries or verified platform webho
 
 ARS payouts use `BANK_TRANSFER`. Set `AccountType` to the string `"CBU"` or `"CVU"`,
 and keep `AccountNo` as a digit string to preserve leading zeros. The same phone
-format applies. All nine recipient fields must be present; `Address` may be an empty string, while `DocumentType` and `DocumentNumber` must not be empty:
+format applies. The eight other recipient fields are required; `Address` is optional.
+Omission, `null` and an empty string all mean no address; non-empty strings are
+preserved, and numbers, booleans, arrays and objects are rejected. The typed Go
+field omits an empty string; `SetExtra` can supply an explicit `null` or empty
+string. `DocumentType` and `DocumentNumber` must not be empty:
 
 ```go
 order, err := c.CreatePayout(ctx, &joogopay.CreatePayoutReq{

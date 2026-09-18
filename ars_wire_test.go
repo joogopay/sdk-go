@@ -135,13 +135,39 @@ func TestARSWireQuerySignsEncodedOrderIdentifier(t *testing.T) {
 }
 
 func TestARSWireExplicitRetryPreservesBusinessIdentity(t *testing.T) {
-	for _, tc := range []struct {
+	cases := []struct {
 		name   string
 		method any
 	}{
 		{"payment", arsPaymentMethod(MethodCodeCVU)},
 		{"payout", arsPayoutMethod("CVU")},
-	} {
+	}
+	for _, address := range []string{"missing", "null", "empty"} {
+		method := arsPayoutMethod("CVU")
+		method.BankTransfer.Address = ""
+		if address != "missing" {
+			body, err := json.Marshal(method.BankTransfer)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var extra map[string]any
+			if err := json.Unmarshal(body, &extra); err != nil {
+				t.Fatal(err)
+			}
+			extra["address"] = nil
+			if address == "empty" {
+				extra["address"] = ""
+			}
+			if err := method.SetExtra("bankTransfer", extra); err != nil {
+				t.Fatal(err)
+			}
+		}
+		cases = append(cases, struct {
+			name   string
+			method any
+		}{"payout-address-" + address, method})
+	}
+	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			k, cap := newTestKeys(t), &capture{}
 			srv := verifyingServer(t, k, `{}`, cap)

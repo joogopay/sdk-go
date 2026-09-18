@@ -79,7 +79,9 @@ order, err := c.CreatePayment(ctx, &joogopay.CreatePaymentReq{
 打开链接或浏览器回跳不表示到账，最终结果以查询或验签后的平台 Webhook 为准。
 
 ARS 代付只使用 `BANK_TRANSFER`，`AccountType` 必须为字符串 `"CBU"` 或 `"CVU"`；
-`AccountNo` 使用数字字符串保留前导零。手机号格式与代收相同，九个收款字段均须提供；`Address` 允许空字符串，`DocumentType` 和 `DocumentNumber` 不能为空：
+`AccountNo` 使用数字字符串保留前导零。手机号格式与代收相同，其余八个收款字段必填，`Address` 可选。
+缺省、`null` 和空字符串均表示无地址，非空字符串原样保留，数字、布尔值、数组和对象会被拒绝。
+Go 类型化字段为空时省略；`SetExtra` 可以显式传入 `null` 或空字符串。`DocumentType` 和 `DocumentNumber` 不能为空：
 
 ```go
 order, err := c.CreatePayout(ctx, &joogopay.CreatePayoutReq{

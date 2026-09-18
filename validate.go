@@ -124,7 +124,8 @@ func validateMethod(currency string, raw []byte, code string, rules map[string]m
 	}
 
 	need := append(append([]string(nil), rule.required...), rule.byMethod[code]...)
-	if len(need) == 0 {
+	optionalStrings := rule.optionalNullableStringsByMethod[code]
+	if len(need) == 0 && len(optionalStrings) == 0 {
 		return nil
 	}
 	extra := map[string]any{}
@@ -144,6 +145,13 @@ func validateMethod(currency string, raw []byte, code string, rules map[string]m
 			return fmt.Errorf("%w: extra.%s for %s %s", ErrMissingRequiredField, f, currency, code)
 		}
 	}
+	for _, f := range optionalStrings {
+		if value := extra[f]; value != nil {
+			if _, ok := value.(string); !ok {
+				return fmt.Errorf("%w: extra.%s must be a string or null for %s %s", ErrInvalidRequest, f, currency, code)
+			}
+		}
+	}
 	return nil
 }
 
@@ -156,7 +164,6 @@ func validatePaymentMethod(currency string, m PaymentMethod) error {
 }
 
 func validatePayoutMethod(currency string, m PayoutMethod) error {
-	m = m.forCurrency(currency)
 	raw, err := m.MarshalJSON()
 	if err != nil {
 		return fmt.Errorf("%w: encode payoutMethod: %w", ErrInvalidRequest, err)

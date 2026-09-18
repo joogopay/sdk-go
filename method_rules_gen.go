@@ -80,10 +80,11 @@ var methodExtraFields = map[string]string{
 
 // methodRule is the method-code allowlist and required fields of one currency in one direction.
 type methodRule struct {
-	codes      []string            // empty means the gateway has no allowlist; the SDK does not reject on code
-	required   []string            // always required
-	byMethod   map[string][]string // extra fields required by that method code
-	allowEmpty []string            // required strings that may be empty
+	codes                           []string            // empty means the gateway has no allowlist; the SDK does not reject on code
+	required                        []string            // always required
+	byMethod                        map[string][]string // extra fields required by that method code
+	allowEmpty                      []string            // required strings that may be empty
+	optionalNullableStringsByMethod map[string][]string // optional strings that also accept null
 }
 
 var paymentMethodRules = map[string]methodRule{
@@ -103,7 +104,7 @@ var paymentMethodRules = map[string]methodRule{
 }
 
 var payoutMethodRules = map[string]methodRule{
-	"ARS": {required: []string{"accountNo", "accountType", "address", "documentNumber", "documentType", "email", "firstName", "lastName", "phone"}, allowEmpty: []string{"address"}},
+	"ARS": {required: []string{"accountNo", "accountType", "documentNumber", "documentType", "email", "firstName", "lastName", "phone"}, optionalNullableStringsByMethod: map[string][]string{"BANK_TRANSFER": {"address"}}},
 	"BDT": {codes: []string{"BD_BKASH", "BD_NAGAD"}, required: []string{"accountName", "accountNo", "email", "mobile"}},
 	"BRL": {required: []string{"key", "keyType"}},
 	"CLP": {required: []string{"accountName", "accountNo", "accountType", "bankCode", "customerEmail", "customerPhone", "documentNumber", "documentType"}},
