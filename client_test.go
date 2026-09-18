@@ -2,6 +2,7 @@ package joogopay
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -34,8 +35,15 @@ func TestCreatePaymentSignsAndSeals(t *testing.T) {
 	if _, err := c.CreatePayment(context.Background(), nil); err != ErrNilRequest {
 		t.Fatalf("nil req: %v", err)
 	}
-	if _, err := c.CreatePayment(context.Background(), validPaymentReq(), WithIdempotencyKey("bad")); err != ErrInvalidIdempotencyKey {
+	// Rejecting the key happens before anything is sent, so it must land in the
+	// same class as any other pre-send failure; a merchant reading ErrTransport
+	// here would query an order that was never created.
+	_, err = c.CreatePayment(context.Background(), validPaymentReq(), WithIdempotencyKey("bad"))
+	if err != ErrInvalidIdempotencyKey {
 		t.Fatalf("bad idempotency: %v", err)
+	}
+	if !errors.Is(err, ErrInvalidRequest) || errors.Is(err, ErrTransport) {
+		t.Fatalf("bad idempotency must be a request error, got %v", err)
 	}
 }
 

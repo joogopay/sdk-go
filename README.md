@@ -85,7 +85,7 @@ your site does not confirm payment. Use order queries or verified platform webho
 
 ARS payouts use `BANK_TRANSFER`. Set `AccountType` to the string `"CBU"` or `"CVU"`,
 and keep `AccountNo` as a digit string to preserve leading zeros. The same phone
-format applies, and all nine recipient fields are required:
+format applies. All nine recipient fields must be present; `Address` may be an empty string, while `DocumentType` and `DocumentNumber` must not be empty:
 
 ```go
 order, err := c.CreatePayout(ctx, &joogopay.CreatePayoutReq{
@@ -105,21 +105,36 @@ order, err := c.CreatePayout(ctx, &joogopay.CreatePayoutReq{
 The SDK checks required fields before sending. The gateway validates phone format
 and account type values. Other currencies retain their own account type rules.
 
+### PEN payments and payouts
+
+The [executable PEN examples](pen_example_test.go) build three payment requests
+(`BANK_TRANSFER`, `E_WALLET`, `CASH`) and three payout requests (bank transfer,
+Yape, Plin), using the existing typed fields. They only serialize requests and
+make no network calls. Run them with `go test -run 'ExampleCreate.*Req_pen'`.
+
+For wallet payouts, use `E_WALLET` / `EWallet` with `BankCode` `026` for Yape or
+`025` for Plin. `AccountNo` identifies the recipient wallet; `CustomerPhone` is
+contact information. Bank payouts use `BANK_TRANSFER` / `BankTransfer`, with
+`AccountType` `SAVINGS` or `CHECKING` and a 20-digit `CciNo`. Keep account numbers
+as strings. All identity and account details in the examples are fictional;
+replace them before sending a real request. Method availability depends on your
+merchant configuration.
+
 ### Two kinds of failure, opposite handling
 
 | Error | Meaning | Action |
 | --- | --- | --- |
 | `errors.Is(err, ErrInvalidRequest)` | Rejected **before it was sent** (local validation, a bad parameter, or a request the SDK could not encode or sign) | Safe to mark failed; fix the request and retry under the same `merchantOrderNo` |
 | `errors.Is(err, ErrTransport)` | Handed to the transport, no usable response (connection failure, timeout, interrupted read) | Outcome unknown; **never mark a payout failed**. Query by `merchantOrderNo`, or resend the identical request under the same number |
-| `*APIError` | The gateway returned a business error (`Msg` / `Message` / `TraceID`) | Branch on `msg`. `IDEMPOTENCY_CONFLICT`: the number is already in flight, query it and keep querying rather than switching numbers. `CHANNEL_ERROR`: the order may already exist, query by `merchantOrderNo` first |
+| `*APIError` | The gateway returned a business error (`Msg` / `Message` / `TraceID`) | Branch on `msg`. `IDEMPOTENCY_CONFLICT`: the number is taken but the platform could not return its order, query that number and keep querying rather than switching numbers. `CHANNEL_ERROR`: the order may already exist, query by `merchantOrderNo` first and reuse that number only once the query returns `ORDER_NOT_FOUND`. `CHANNEL_BUSY`: refused before the order was created, so resend the same number after a back-off; this is the only channel error that needs no query first |
 | `*ResponseError` | The gateway or CDN returned something that is not an envelope (HTML 502, ...) | Outcome unknown; query before deciding |
 | `errors.Is(err, ErrResponseTooLarge)` | A response arrived but exceeded the size limit and was discarded | Outcome unknown; the order was most likely created, query before deciding |
 | Anything else | An unexpected error; assume the request may have arrived | Outcome unknown; query before deciding |
 
 **`merchantOrderNo` is the only key that prevents a duplicate order.** A second
 create with the same number never creates a second order: the platform answers
-with the original order, or with `IDEMPOTENCY_CONFLICT` while the first one is
-still being placed. The idempotency key travels with the request for tracing and
+with the original order, or with `IDEMPOTENCY_CONFLICT` when it recognises the
+number as taken but cannot return that order. The idempotency key travels with the request for tracing and
 is **not** a deduplication key.
 
 Two rules follow:
@@ -133,7 +148,7 @@ Two rules follow:
 
 The SDK validates locally before signing (top-level required fields and formats,
 method shape and required extras); the rules are defined in
-[`protocol/merchant-api.md`](protocol/merchant-api.md#client-side-validation).
+[`protocol/merchant-api.md`](https://github.com/joogopay/sdk-go/blob/main/protocol/merchant-api.md#client-side-validation).
 Format checks (phone length, e-mail, …) stay with the gateway on purpose.
 
 ## 2. Idempotency and retries
@@ -179,7 +194,7 @@ if wh.Status == "FAILED" && wh.Failure != nil {
 }
 ```
 
-Full error-code table: [`protocol/errors.md`](protocol/errors.md).
+Full error-code table: [`protocol/errors.md`](https://github.com/joogopay/sdk-go/blob/main/protocol/errors.md).
 
 ## 4. Amounts
 
@@ -194,10 +209,9 @@ m := joogopay.PaymentMethod{Code: "NEW_METHOD"}
 _ = m.SetExtra("newMethod", map[string]any{"customerName": "X", "bankCode": "001"})
 ```
 
-
 ## 6. Protocol and test vectors
 
-[`protocol/`](protocol/) is the cross-language source of truth: the
+[`protocol/`](https://github.com/joogopay/sdk-go/tree/main/protocol/) is the cross-language source of truth: the
 signature wire spec, the sealed-box envelope spec, and fixed test vectors.
 
 ## 7. Development

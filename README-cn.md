@@ -7,6 +7,14 @@ X25519 公钥做 libsodium sealed box 加密。签名、摘要、加密由 SDK �
 `NewClient` 拒绝非 HTTPS BaseURL。同步响应仍是明文 JSON，其保密性和完整性由 HTTPS/TLS
 保证。
 
+## 0. 安装
+
+```
+go get github.com/joogopay/sdk-go
+```
+
+需要 Go 1.24 及以上。唯一的第三方依赖是 `golang.org/x/crypto`。
+
 ## 1. 用法
 
 ```go
@@ -71,7 +79,7 @@ order, err := c.CreatePayment(ctx, &joogopay.CreatePaymentReq{
 打开链接或浏览器回跳不表示到账，最终结果以查询或验签后的平台 Webhook 为准。
 
 ARS 代付只使用 `BANK_TRANSFER`，`AccountType` 必须为字符串 `"CBU"` 或 `"CVU"`；
-`AccountNo` 使用数字字符串保留前导零。手机号格式与代收相同，九个收款字段均必填：
+`AccountNo` 使用数字字符串保留前导零。手机号格式与代收相同，九个收款字段均须提供；`Address` 允许空字符串，`DocumentType` 和 `DocumentNumber` 不能为空：
 
 ```go
 order, err := c.CreatePayout(ctx, &joogopay.CreatePayoutReq{
@@ -90,18 +98,30 @@ order, err := c.CreatePayout(ctx, &joogopay.CreatePayoutReq{
 
 SDK 在发送前检查必填字段；手机号格式与账户类型取值由网关校验。其他币种沿用各自的账户类型。
 
+### PEN 代收与代付
+
+[可执行 PEN 示例](pen_example_test.go)使用现有类型构建三种代收请求
+（`BANK_TRANSFER`、`E_WALLET`、`CASH`）及银行、Yape、Plin 三种代付请求。
+示例只序列化请求，不发送网络请求，可运行 `go test -run 'ExampleCreate.*Req_pen'` 验证。
+
+钱包代付使用 `E_WALLET` / `EWallet`，`BankCode` 为 `026` 表示 Yape，为 `025` 表示
+Plin；`AccountNo` 是钱包收款标识，`CustomerPhone` 是联系电话。银行代付使用
+`BANK_TRANSFER` / `BankTransfer`，提供 `SAVINGS` 或 `CHECKING` 的 `AccountType`
+及 20 位 `CciNo`。账号保持字符串。示例中的身份及账户资料均为虚构，实际请求前必须替换；
+支付方式是否可用以商户配置为准。
+
 ### 错误分两类，处置相反
 
 | 错误 | 含义 | 处置 |
 | --- | --- | --- |
 | `errors.Is(err, ErrInvalidRequest)` | 请求**没发出去**（本地校验失败、参数非法，或 SDK 无法编码、签名） | 可以安全判负，修参数后用同一个 `merchantOrderNo` 重试 |
 | `errors.Is(err, ErrTransport)` | 请求已交给传输层但没拿到可用响应（连接失败、超时、读响应中断） | 结果不确定，**出款一律不得判负**。用 `merchantOrderNo` 查询，或用同一个单号原样重发 |
-| `*APIError` | 网关返回了业务错误（`Msg` / `Message` / `TraceID`） | 按 `Msg` 分支。`IDEMPOTENCY_CONFLICT`：该单号正在处理中，继续查询，不要换号。`CHANNEL_ERROR`：订单可能已生成，先用 `merchantOrderNo` 查询 |
+| `*APIError` | 网关返回了业务错误（`Msg` / `Message` / `TraceID`） | 按 `Msg` 分支。`IDEMPOTENCY_CONFLICT`：该单号已被占用但平台取不回那笔订单，继续按该单号查询，不要换号。`CHANNEL_ERROR`：订单可能已生成，先用 `merchantOrderNo` 查询，只有查询返回 `ORDER_NOT_FOUND` 才可以用同一单号重新下单。`CHANNEL_BUSY`：网关在建单前就拒了，退避后用同一单号直接重发，这是唯一不需要先查单的渠道错误 |
 | `*ResponseError` | 网关 / CDN 返回了非 envelope 响应（HTML 502 等） | 结果不确定，查询后再判定 |
 | `errors.Is(err, ErrResponseTooLarge)` | 响应已收到但超过大小上限被丢弃 | 结果不确定，订单大概率已创建，查询后再判定 |
 | 其他 | 意料之外的错误，按请求可能已到达处理 | 结果不确定，查询后再判定 |
 
-**`merchantOrderNo` 是唯一能防止重复下单的键。** 同一个单号第二次创建不会产生第二笔订单：平台返回原订单，或在第一笔还在下单途中时返回 `IDEMPOTENCY_CONFLICT`。idempotency key 只随请求用于链路追踪，**不是**去重键。
+**`merchantOrderNo` 是唯一能防止重复下单的键。** 同一个单号第二次创建不会产生第二笔订单：平台返回原订单，或在认定该单号已被占用却取不回那笔订单时返回 `IDEMPOTENCY_CONFLICT`。idempotency key 只随请求用于链路追踪，**不是**去重键。
 
 由此有两条规则：
 

@@ -21,6 +21,7 @@ var methodExtraFields = map[string]string{
 	"BREB":              "breb",
 	"CASH":              "cash",
 	"CASH_APP":          "cashApp",
+	"CHIME":             "chime",
 	"CREDIT_CARD":       "creditCard",
 	"CVU":               "cvu",
 	"E_WALLET":          "eWallet",
@@ -43,6 +44,7 @@ var methodExtraFields = map[string]string{
 	"PAGO46":            "pago46",
 	"PAGO_FACIL":        "pagoFacil",
 	"PAPARA":            "papara",
+	"PAYPAL":            "paypal",
 	"PH_DF_BANK":        "phDfBank",
 	"PH_DF_WALLET":      "phDfWallet",
 	"PH_GCASH":          "phGcash",
@@ -78,9 +80,10 @@ var methodExtraFields = map[string]string{
 
 // methodRule is the method-code allowlist and required fields of one currency in one direction.
 type methodRule struct {
-	codes    []string            // empty means the gateway has no allowlist; the SDK does not reject on code
-	required []string            // always required
-	byMethod map[string][]string // extra fields required by that method code
+	codes      []string            // empty means the gateway has no allowlist; the SDK does not reject on code
+	required   []string            // always required
+	byMethod   map[string][]string // extra fields required by that method code
+	allowEmpty []string            // required strings that may be empty
 }
 
 var paymentMethodRules = map[string]methodRule{
@@ -96,10 +99,11 @@ var paymentMethodRules = map[string]methodRule{
 	"PHP": {codes: []string{"PH_GCASH", "PH_GCASH_QR", "PH_GRAB", "PH_MAYA", "PH_MAYA_QR", "PH_NATIVE_GCASH", "PH_QRIS"}},
 	"PKR": {codes: []string{"PK_EASYPAISA", "PK_EASYPAISA_QRPH", "PK_JAZZCASH", "PK_JAZZCASH_QRPH"}},
 	"TRY": {required: []string{"customerName"}},
+	"USD": {codes: []string{"CASH_APP"}, required: []string{"name", "phone", "email", "ipAddress"}},
 }
 
 var payoutMethodRules = map[string]methodRule{
-	"ARS": {required: []string{"accountNo", "accountType", "address", "documentNumber", "documentType", "email", "firstName", "lastName", "phone"}},
+	"ARS": {required: []string{"accountNo", "accountType", "address", "documentNumber", "documentType", "email", "firstName", "lastName", "phone"}, allowEmpty: []string{"address"}},
 	"BDT": {codes: []string{"BD_BKASH", "BD_NAGAD"}, required: []string{"accountName", "accountNo", "email", "mobile"}},
 	"BRL": {required: []string{"key", "keyType"}},
 	"CLP": {required: []string{"accountName", "accountNo", "accountType", "bankCode", "customerEmail", "customerPhone", "documentNumber", "documentType"}},
@@ -111,4 +115,5 @@ var payoutMethodRules = map[string]methodRule{
 	"PHP": {codes: []string{"PH_DF_BANK", "PH_DF_WALLET"}, required: []string{"accountName", "accountNo", "bankCode", "email", "mobile"}},
 	"PKR": {codes: []string{"PK_BANK", "PK_EASYPAISA", "PK_JAZZCASH"}, required: []string{"accountNo", "cnic", "mobile"}, byMethod: map[string][]string{"PK_BANK": {"bankCode"}}},
 	"TRY": {required: []string{"accountName", "accountNo"}, byMethod: map[string][]string{"BANK_TRANSFER": {"bankCode", "bankName"}}},
+	"USD": {codes: []string{"CASH_APP", "PAYPAL", "CHIME"}, required: []string{"name", "phone", "email", "accountNo", "firstName", "lastName", "dateOfBirth", "countryOfResidence", "stateOfResidence", "cardCity", "cardStreet", "cardPostCode"}},
 }

@@ -26,6 +26,12 @@ type CreatePayoutReq struct {
 	Attach          string       `json:"attach,omitempty"`
 }
 
+func (r CreatePayoutReq) MarshalJSON() ([]byte, error) {
+	type alias CreatePayoutReq
+	r.PayoutMethod = r.PayoutMethod.forCurrency(r.Currency)
+	return json.Marshal(alias(r))
+}
+
 // PaymentMethod holds strongly-typed fields for every current payment method branch.
 // For a method not yet in a release, wire it at runtime via SetExtra("xxx", payload).
 type PaymentMethod struct {
@@ -265,6 +271,8 @@ type PayoutMethod struct {
 	Transfiya      *PayoutTransfiyaExtra          `json:"transfiya,omitempty"`
 	Papara         *PayoutPaparaExtra             `json:"papara,omitempty"`
 	CashApp        *PayoutCashAppExtra            `json:"cashApp,omitempty"`
+	PayPal         *PayoutCashAppExtra            `json:"paypal,omitempty"`
+	Chime          *PayoutCashAppExtra            `json:"chime,omitempty"`
 	UsdtTrc20      *PayoutUsdtExtra               `json:"usdtTrc20,omitempty"`
 	UsdtErc20      *PayoutUsdtExtra               `json:"usdtErc20,omitempty"`
 	UsdtBep20      *PayoutUsdtExtra               `json:"usdtBep20,omitempty"`
@@ -288,7 +296,13 @@ type PayoutMethod struct {
 	InIfsc         *PayoutInIfscExtra             `json:"inIfsc,omitempty"`
 	InUpi          *PayoutInUpiExtra              `json:"inUpi,omitempty"`
 
-	extra map[string]any
+	extra            map[string]any
+	keepEmptyAddress bool
+}
+
+func (m PayoutMethod) forCurrency(currency string) PayoutMethod {
+	m.keepEmptyAddress = strings.EqualFold(strings.TrimSpace(currency), CurrencyARS) && strings.TrimSpace(m.Code) == MethodCodeBankTransfer
+	return m
 }
 
 func (m *PayoutMethod) SetExtra(field string, value any) error {
@@ -309,12 +323,26 @@ func (m PayoutMethod) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(m.extra) == 0 {
+	keepAddress := m.keepEmptyAddress && m.BankTransfer != nil && m.BankTransfer.Address == ""
+	if len(m.extra) == 0 && !keepAddress {
 		return b, nil
 	}
 	obj := map[string]json.RawMessage{}
 	if err := json.Unmarshal(b, &obj); err != nil {
 		return nil, err
+	}
+	// ARS requires the address field even when the typed string is empty.
+	// SetExtra below still overrides the typed branch without inventing fields.
+	if keepAddress {
+		var bankTransfer map[string]json.RawMessage
+		if err := json.Unmarshal(obj["bankTransfer"], &bankTransfer); err != nil {
+			return nil, err
+		}
+		bankTransfer["address"] = json.RawMessage(`""`)
+		obj["bankTransfer"], err = json.Marshal(bankTransfer)
+		if err != nil {
+			return nil, err
+		}
 	}
 	for k, v := range m.extra {
 		eb, err := json.Marshal(v)
@@ -381,11 +409,21 @@ type PayoutPaparaExtra struct {
 	AccountNo   string `json:"accountNo,omitempty"`
 }
 
+// PayoutCashAppExtra is shared by USD Cash App, PayPal and Chime payouts.
+// cardCity, cardStreet and cardPostCode describe the recipient address, not a card.
 type PayoutCashAppExtra struct {
-	Name      string `json:"name,omitempty"`
-	Phone     string `json:"phone,omitempty"`
-	Email     string `json:"email,omitempty"`
-	AccountNo string `json:"accountNo,omitempty"`
+	Name               string `json:"name,omitempty"`
+	Phone              string `json:"phone,omitempty"`
+	Email              string `json:"email,omitempty"`
+	AccountNo          string `json:"accountNo,omitempty"`
+	FirstName          string `json:"firstName,omitempty"`
+	LastName           string `json:"lastName,omitempty"`
+	DateOfBirth        string `json:"dateOfBirth,omitempty"`
+	CountryOfResidence string `json:"countryOfResidence,omitempty"`
+	StateOfResidence   string `json:"stateOfResidence,omitempty"`
+	CardCity           string `json:"cardCity,omitempty"`
+	CardStreet         string `json:"cardStreet,omitempty"`
+	CardPostCode       string `json:"cardPostCode,omitempty"`
 }
 
 type PayoutUsdtExtra struct {

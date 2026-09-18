@@ -3,6 +3,7 @@ package joogopay
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -133,6 +134,12 @@ func validateMethod(currency string, raw []byte, code string, rules map[string]m
 		}
 	}
 	for _, f := range need {
+		if slices.Contains(rule.allowEmpty, f) {
+			if _, ok := extra[f].(string); !ok {
+				return fmt.Errorf("%w: extra.%s must be a string for %s %s", ErrMissingRequiredField, f, currency, code)
+			}
+			continue
+		}
 		if v, ok := extra[f]; !ok || emptyExtraValue(v) {
 			return fmt.Errorf("%w: extra.%s for %s %s", ErrMissingRequiredField, f, currency, code)
 		}
@@ -149,6 +156,7 @@ func validatePaymentMethod(currency string, m PaymentMethod) error {
 }
 
 func validatePayoutMethod(currency string, m PayoutMethod) error {
+	m = m.forCurrency(currency)
 	raw, err := m.MarshalJSON()
 	if err != nil {
 		return fmt.Errorf("%w: encode payoutMethod: %w", ErrInvalidRequest, err)

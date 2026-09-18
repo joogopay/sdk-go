@@ -21,22 +21,36 @@ const (
 )
 
 type Config struct {
+	// Scheme and host of the platform API, https only. A path, query or fragment
+	// is rejected: the SDK appends the endpoint path itself.
 	BaseURL string
 
-	AccessKey                string
+	AccessKey string
+	// Ed25519 private key, base64. Both forms are accepted: the 32-byte seed that
+	// libsodium and OpenSSL hand out, and Go's 64-byte seed-plus-public-key.
 	MerchantPrivateKeyBase64 string
 
-	PlatformBodyKeyID           string
+	// Names which platform key seals the request body; it travels in the envelope
+	// so the gateway knows which private key opens it. Must name the key given in
+	// PlatformBodyPublicKeyBase64.
+	PlatformBodyKeyID string
+	// Platform X25519 public key, base64, 32 bytes. Not the webhook key: that one
+	// is Ed25519 and verifies signatures in the opposite direction.
 	PlatformBodyPublicKeyBase64 string
 
+	// Key id to platform Ed25519 public key, base64, 32 bytes each, for verifying
+	// webhook signatures. The webhook names its key id, so this must hold every key
+	// the platform may currently sign with; during a rotation that is two. Required
+	// even when the merchant does not consume webhooks.
 	PlatformWebhookPublicKeys map[string]string
 
+	// Setting HTTPClient ignores Timeout, which only builds the default client.
 	HTTPClient *http.Client
-	Timeout    time.Duration
+	Timeout    time.Duration // default 30s
 
 	UserAgent        string
 	AcceptLanguage   string
-	MaxResponseBytes int64
+	MaxResponseBytes int64 // default 8 MiB
 }
 
 type Client struct {

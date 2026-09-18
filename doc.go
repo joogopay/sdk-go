@@ -17,7 +17,8 @@
 //
 // Amounts, balances, fees and rates are decimal strings, never JSON numbers.
 // Write APIs are not retried automatically; recover from timeouts by querying
-// the order via merchantOrderNo or orderNo. Reuse the same idempotency key on a
-// deliberate retry with WithIdempotencyKey. The wire protocol is documented
+// the order via merchantOrderNo or orderNo. A deliberate retry reuses the same
+// merchantOrderNo, which is the only key the platform deduplicates on; the
+// idempotency key is carried for tracing only. The wire protocol is documented
 // under protocol/ and the shared conformance vectors under protocol/testdata.
 package joogopay

@@ -108,6 +108,8 @@ func TestARSRequiredFieldsRejectBeforeRequest(t *testing.T) {
 	srv := verifyingServer(t, k, `{}`, cap)
 	defer srv.Close()
 	c := k.client(t, srv.URL, srv.Client())
+	// Every request carries a complete envelope: the top-level check runs first
+	// and would otherwise mask the method field under test.
 	for _, code := range []string{MethodCodeBankTransfer, MethodCodeCVU, MethodCodeQRIS} {
 		fields := []string{"firstName", "lastName", "email", "documentType", "documentNumber"}
 		if code != MethodCodeBankTransfer {
@@ -127,8 +129,11 @@ func TestARSRequiredFieldsRejectBeforeRequest(t *testing.T) {
 				if err := m.SetExtra(branch, extra); err != nil {
 					t.Fatal(err)
 				}
-				_, err := c.CreatePayment(context.Background(), &CreatePaymentReq{Currency: CurrencyARS, PaymentMethod: m})
-				if !errors.Is(err, ErrMissingRequiredField) || !errors.Is(err, ErrInvalidRequest) {
+				_, err := c.CreatePayment(context.Background(), &CreatePaymentReq{
+					MerchantOrderNo: "ars-missing-" + field, Currency: CurrencyARS, Amount: "1000.00",
+					PaymentMethod: m, WebhookUrl: "https://merchant.example.com/webhook",
+				})
+				if !errors.Is(err, ErrMissingRequiredField) || !errors.Is(err, ErrInvalidRequest) || !strings.Contains(err.Error(), "extra."+field) {
 					t.Fatalf("missing %s: got %v", field, err)
 				}
 			})
@@ -146,8 +151,11 @@ func TestARSRequiredFieldsRejectBeforeRequest(t *testing.T) {
 			if err := m.SetExtra("bankTransfer", extra); err != nil {
 				t.Fatal(err)
 			}
-			_, err := c.CreatePayout(context.Background(), &CreatePayoutReq{Currency: CurrencyARS, PayoutMethod: m})
-			if !errors.Is(err, ErrMissingRequiredField) || !errors.Is(err, ErrInvalidRequest) {
+			_, err := c.CreatePayout(context.Background(), &CreatePayoutReq{
+				MerchantOrderNo: "ars-missing-" + field, Currency: CurrencyARS, Amount: "1000.00",
+				PayoutMethod: m, WebhookUrl: "https://merchant.example.com/webhook",
+			})
+			if !errors.Is(err, ErrMissingRequiredField) || !errors.Is(err, ErrInvalidRequest) || !strings.Contains(err.Error(), "extra."+field) {
 				t.Fatalf("missing %s: got %v", field, err)
 			}
 		})
@@ -172,6 +180,101 @@ func TestARSDocumentPhoneIsOptionalOutsideCVU(t *testing.T) {
 	} {
 		if err := validatePaymentMethod(CurrencyARS, m); err != nil {
 			t.Fatalf("existing method unexpectedly requires phone: %v", err)
+		}
+	}
+}
+
+func TestARSPayoutEmptyAddressWire(t *testing.T) {
+	for _, rawExtra := range []bool{false, true} {
+		for _, accountType := range []string{"CBU", "CVU"} {
+			k := newTestKeys(t)
+			cap := &capture{}
+			srv := verifyingServer(t, k, `{}`, cap)
+			t.Cleanup(srv.Close)
+			method := arsPayoutMethod(accountType)
+			method.BankTransfer.Address = ""
+			if rawExtra {
+				body, _ := json.Marshal(method.BankTransfer)
+				var extra map[string]any
+				if err := json.Unmarshal(body, &extra); err != nil {
+					t.Fatal(err)
+				}
+				extra["address"] = ""
+				if err := method.SetExtra("bankTransfer", extra); err != nil {
+					t.Fatal(err)
+				}
+			}
+			req := &CreatePayoutReq{MerchantOrderNo: "ars-address-001", Currency: CurrencyARS, Amount: "1.00", WebhookUrl: "https://merchant.example.com/webhook", PayoutMethod: method}
+			if _, err := k.client(t, srv.URL, srv.Client()).CreatePayout(context.Background(), req); err != nil {
+				t.Fatal(err)
+			}
+			var opened struct {
+				PayoutMethod struct {
+					BankTransfer map[string]any `json:"bankTransfer"`
+				} `json:"payoutMethod"`
+			}
+			if err := json.Unmarshal(cap.openedBody, &opened); err != nil {
+				t.Fatal(err)
+			}
+			address, present := opened.PayoutMethod.BankTransfer["address"]
+			if !present || address != "" {
+				t.Fatalf("empty address was not transmitted: %s", cap.openedBody)
+			}
+		}
+	}
+}
+
+func TestARSPayoutAddressRejectsMissingNullAndNonString(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		address any
+		present bool
+	}{
+		{"missing", nil, false}, {"null", nil, true}, {"number", 1, true},
+		{"boolean", false, true}, {"array", []any{}, true}, {"object", map[string]any{}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			method := arsPayoutMethod("CBU")
+			method.BankTransfer.Address = ""
+			body, _ := json.Marshal(method.BankTransfer)
+			var extra map[string]any
+			if err := json.Unmarshal(body, &extra); err != nil {
+				t.Fatal(err)
+			}
+			if tc.present {
+				extra["address"] = tc.address
+			}
+			if err := method.SetExtra("bankTransfer", extra); err != nil {
+				t.Fatal(err)
+			}
+			err := validatePayoutMethod(CurrencyARS, method)
+			if err == nil || !strings.Contains(err.Error(), "extra.address") {
+				t.Fatalf("invalid address accepted: %v", err)
+			}
+		})
+	}
+	for _, field := range []string{"documentType", "documentNumber"} {
+		method := arsPayoutMethod("CBU")
+		if field == "documentType" {
+			method.BankTransfer.DocumentType = ""
+		} else {
+			method.BankTransfer.DocumentNumber = ""
+		}
+		if err := validatePayoutMethod(CurrencyARS, method); err == nil {
+			t.Fatalf("empty %s accepted", field)
+		}
+	}
+}
+
+func TestPayoutEmptyAddressOmittedOutsideARS(t *testing.T) {
+	for _, currency := range []string{"MXN", "PEN", "CLP"} {
+		req := CreatePayoutReq{Currency: currency, PayoutMethod: PayoutMethod{Code: MethodCodeBankTransfer, BankTransfer: &PayoutBankTransferExtra{AccountNo: "123"}}}
+		body, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(body), `"address"`) {
+			t.Fatalf("%s unexpectedly sends an empty address: %s", currency, body)
 		}
 	}
 }

@@ -75,6 +75,8 @@ const (
 	MethodCodeServiFacil      = "SERVIFACIL"
 	MethodCodeEWallet         = "E_WALLET"
 	MethodCodeCashApp         = "CASH_APP"
+	MethodCodePayPal          = "PAYPAL"
+	MethodCodeChime           = "CHIME"
 	MethodCodeCreditCard      = "CREDIT_CARD"
 	MethodCodeApplePay        = "APPLE_PAY"
 	MethodCodeGooglePay       = "GOOGLE_PAY"

@@ -2,6 +2,27 @@
 
 Versions follow SemVer. Tags are `vX.Y.Z` on this repository.
 
+## v0.3.0 — 2026-09-18
+
+- ARS payouts accept an empty `Address`. It is the only required field that may
+  be blank, and it must still reach the gateway as a string: for `ARS` /
+  `BANK_TRANSFER` the SDK now sends `"address": ""` instead of dropping the empty
+  field, while a missing, `null` or non-string `address` given through
+  `SetExtra` is still rejected before the request goes out. v0.2.0 rejected an
+  empty address as a missing required field.
+- USD payments accept `CASH_APP` only; USD payouts accept `CASH_APP`, `PAYPAL`
+  and `CHIME`. Each carries its own required set, checked before the request
+  goes out; v0.2.0 had no USD rules and passed every USD request through to the
+  gateway. `PayoutMethod` gains typed `PayPal` / `Chime` fields,
+  `PayoutCashAppExtra` (shared by the three payout methods) gains `FirstName`,
+  `LastName`, `DateOfBirth`, `CountryOfResidence`, `StateOfResidence`,
+  `CardCity`, `CardStreet` and `CardPostCode`, and `MethodCodePayPal` /
+  `MethodCodeChime` are new constants.
+- Documentation: executable PEN payment and payout examples in
+  `pen_example_test.go`; expanded godoc for `Config`; `IDEMPOTENCY_CONFLICT`
+  and `CHANNEL_BUSY` handling in the error table; `protocol/` links in the
+  README are absolute so they resolve on pkg.go.dev.
+
 ## v0.2.0 — 2026-09-14
 
 - `PayoutMethod` gains typed `IdDana` / `IdOvo` / `IdGopay` / `IdLinkaja` /
