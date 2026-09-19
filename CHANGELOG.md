@@ -2,6 +2,13 @@
 
 Versions follow SemVer. Tags are `vX.Y.Z` on this repository.
 
+## v0.4.0 — 2026-09-19
+
+- `PayoutMethod` gains typed `PhGcash` / `PhMaya` fields for Philippine payouts.
+  `PhDfWallet` stays for every other wallet, GrabPay included. The `PHP` payout
+  allowlist adds `PH_GCASH` / `PH_MAYA`, and `bankCode` is required only for
+  `PH_DF_BANK` and `PH_DF_WALLET`; the channel derives it for the named wallets.
+
 ## v0.3.1 — 2026-09-18
 
 - Needs a platform that accepts an omitted or `null` ARS `address` (platform

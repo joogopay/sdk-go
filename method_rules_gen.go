@@ -113,7 +113,7 @@ var payoutMethodRules = map[string]methodRule{
 	"INR": {codes: []string{"IN_IFSC", "IN_UPI"}, required: []string{"email", "mobile", "name"}, byMethod: map[string][]string{"IN_IFSC": {"account", "ifsc"}}},
 	"MXN": {required: []string{"accountName", "accountNo", "accountType", "bankCode", "bankName"}},
 	"PEN": {codes: []string{"BANK_TRANSFER", "E_WALLET"}, required: []string{"accountName", "accountNo", "bankCode", "customerEmail", "customerPhone", "documentNumber", "documentType"}, byMethod: map[string][]string{"BANK_TRANSFER": {"accountType", "cciNo"}}},
-	"PHP": {codes: []string{"PH_DF_BANK", "PH_DF_WALLET"}, required: []string{"accountName", "accountNo", "bankCode", "email", "mobile"}},
+	"PHP": {codes: []string{"PH_DF_BANK", "PH_DF_WALLET", "PH_GCASH", "PH_MAYA"}, required: []string{"accountName", "accountNo", "email", "mobile"}, byMethod: map[string][]string{"PH_DF_BANK": {"bankCode"}, "PH_DF_WALLET": {"bankCode"}}},
 	"PKR": {codes: []string{"PK_BANK", "PK_EASYPAISA", "PK_JAZZCASH"}, required: []string{"accountNo", "cnic", "mobile"}, byMethod: map[string][]string{"PK_BANK": {"bankCode"}}},
 	"TRY": {required: []string{"accountName", "accountNo"}, byMethod: map[string][]string{"BANK_TRANSFER": {"bankCode", "bankName"}}},
 	"USD": {codes: []string{"CASH_APP", "PAYPAL", "CHIME"}, required: []string{"name", "phone", "email", "accountNo", "firstName", "lastName", "dateOfBirth", "countryOfResidence", "stateOfResidence", "cardCity", "cardStreet", "cardPostCode"}},

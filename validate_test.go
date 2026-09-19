@@ -144,6 +144,46 @@ func TestValidatePayoutIDRWallets(t *testing.T) {
 	}
 }
 
+// TestValidatePayoutPHWallets pins the Philippine wallets to the same shape the other
+// countries use: one code works in both directions, and bankCode is required only for
+// the bank transfer (the channel derives the wallet from the method code).
+func TestValidatePayoutPHWallets(t *testing.T) {
+	extra := func() *PayoutBankAccountContactExtra {
+		return &PayoutBankAccountContactExtra{AccountNo: "09171234567", AccountName: "Juan", Email: "j@example.com", Mobile: "09171234567"}
+	}
+	for _, m := range []PayoutMethod{
+		{Code: "PH_GCASH", PhGcash: extra()},
+		{Code: "PH_MAYA", PhMaya: extra()},
+	} {
+		if err := validatePayoutMethod("PHP", m); err != nil {
+			t.Fatalf("%s: wallet payout needs no bankCode, got %v", m.Code, err)
+		}
+	}
+	bank := PayoutMethod{Code: "PH_DF_BANK", PhDfBank: extra()}
+	if err := validatePayoutMethod("PHP", bank); !errors.Is(err, ErrMissingRequiredField) {
+		t.Fatalf("PH_DF_BANK without bankCode: want ErrMissingRequiredField, got %v", err)
+	}
+	// GrabPay has no payout code of its own yet: GCash and Maya cover nearly all
+	// Philippine payout volume, and GrabPay goes out under PH_DF_WALLET with bankCode.
+	grab := PayoutMethod{Code: "PH_GRAB"}
+	if err := grab.SetExtra("phGrab", extra()); err != nil {
+		t.Fatalf("SetExtra: %v", err)
+	}
+	if err := validatePayoutMethod("PHP", grab); !errors.Is(err, ErrMethodNotAvailable) {
+		t.Fatalf("PH_GRAB payout: want ErrMethodNotAvailable, got %v", err)
+	}
+	// The generic PH_DF_WALLET code is kept for existing integrations, and there
+	// bankCode is what names the wallet, so it stays required.
+	legacy := PayoutMethod{Code: "PH_DF_WALLET", PhDfWallet: extra()}
+	if err := validatePayoutMethod("PHP", legacy); !errors.Is(err, ErrMissingRequiredField) {
+		t.Fatalf("PH_DF_WALLET without bankCode: want ErrMissingRequiredField, got %v", err)
+	}
+	wrong := PayoutMethod{Code: "PH_GCASH", PhMaya: extra()}
+	if err := validatePayoutMethod("PHP", wrong); !errors.Is(err, ErrMethodExtraMismatch) {
+		t.Fatalf("wallet extra under another wallet's field: want ErrMethodExtraMismatch, got %v", err)
+	}
+}
+
 // TestValidateSeesSetExtra checks that validation, running on the serialized
 // shape, sees SetExtra payloads too.
 func TestValidateSeesSetExtra(t *testing.T) {

@@ -285,6 +285,8 @@ type PayoutMethod struct {
 	IdGopay        *PayoutBankAccountContactExtra `json:"idGopay,omitempty"`
 	IdLinkaja      *PayoutBankAccountContactExtra `json:"idLinkaja,omitempty"`
 	IdShopeepay    *PayoutBankAccountContactExtra `json:"idShopeepay,omitempty"`
+	PhGcash        *PayoutBankAccountContactExtra `json:"phGcash,omitempty"`
+	PhMaya         *PayoutBankAccountContactExtra `json:"phMaya,omitempty"`
 	PhDfWallet     *PayoutBankAccountContactExtra `json:"phDfWallet,omitempty"`
 	PhDfBank       *PayoutBankAccountContactExtra `json:"phDfBank,omitempty"`
 	EWallet        *PayoutEWalletExtra            `json:"eWallet,omitempty"`
