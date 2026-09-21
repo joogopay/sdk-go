@@ -174,13 +174,13 @@ func TestARSDocumentPhoneIsOptionalOutsideCVU(t *testing.T) {
 	if err != nil || strings.Contains(string(body), `"phone"`) {
 		t.Fatal("empty optional phone must be omitted")
 	}
-	for _, m := range []PaymentMethod{
-		{Code: MethodCodePagoFacil, PagoFacil: extra},
-		{Code: MethodCodeRapipago, Rapipago: extra},
-	} {
-		if err := validatePaymentMethod(CurrencyARS, m); err != nil {
-			t.Fatalf("existing method unexpectedly requires phone: %v", err)
-		}
+	// BANK_TRANSFER is the only ARS pay-in code the gateway accepts besides CVU and QRIS.
+	m := PaymentMethod{Code: MethodCodeBankTransfer, BankTransfer: &PaymentBankTransferExtra{
+		FirstName: "Ana", LastName: "Perez", Email: "ana@example.com",
+		DocumentType: "DNI", DocumentNumber: "30123456",
+	}}
+	if err := validatePaymentMethod(CurrencyARS, m); err != nil {
+		t.Fatalf("existing method unexpectedly requires phone: %v", err)
 	}
 }
 
