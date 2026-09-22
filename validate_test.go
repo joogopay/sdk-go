@@ -125,7 +125,8 @@ func TestValidatePayoutConditionalRequired(t *testing.T) {
 // field: each is accepted under its field and rejected under another wallet's.
 func TestValidatePayoutIDRWallets(t *testing.T) {
 	extra := func(wallet string) *PayoutBankAccountContactExtra {
-		return &PayoutBankAccountContactExtra{BankCode: wallet, AccountName: "Budi", Email: "b@example.com", Mobile: "081234567890"}
+		// accountNo is the wallet-registered phone number and receives the funds; mobile is a contact number.
+		return &PayoutBankAccountContactExtra{BankCode: wallet, AccountNo: "081234567890", AccountName: "Budi", Email: "b@example.com", Mobile: "089999999999"}
 	}
 	for _, m := range []PayoutMethod{
 		{Code: "ID_DANA", IdDana: extra("DANA")},
@@ -141,6 +142,12 @@ func TestValidatePayoutIDRWallets(t *testing.T) {
 	wrong := PayoutMethod{Code: "ID_DANA", IdOvo: extra("OVO")}
 	if err := validatePayoutMethod("IDR", wrong); !errors.Is(err, ErrMethodExtraMismatch) {
 		t.Fatalf("wallet extra under another wallet's field: want ErrMethodExtraMismatch, got %v", err)
+	}
+	// The gateway takes the recipient account from accountNo for wallets too; mobile never stands in for it.
+	noAccount := extra("DANA")
+	noAccount.AccountNo = ""
+	if err := validatePayoutMethod("IDR", PayoutMethod{Code: "ID_DANA", IdDana: noAccount}); !errors.Is(err, ErrMissingRequiredField) {
+		t.Fatalf("IDR wallet without accountNo: want ErrMissingRequiredField, got %v", err)
 	}
 }
 

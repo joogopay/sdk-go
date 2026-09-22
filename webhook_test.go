@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -170,5 +171,45 @@ func TestParseWebhookErrors(t *testing.T) {
 	}
 	if _, err := c.ParsePayoutWebhook(signWebhook(t, k, []byte(`{"eventId":"`+eid+`"}`), eid)); err != ErrInvalidWebhookBody {
 		t.Fatalf("payout invalid body: %v", err)
+	}
+}
+
+func TestParsePaymentWebhookPayer(t *testing.T) {
+	k := newTestKeys(t)
+	c := k.client(t, "https://api.example.com")
+	eid := newEventID()
+	for _, tc := range []struct {
+		name      string
+		payerJSON string
+		want      *PaymentPayer
+	}{
+		{"absent", "", nil},
+		{"null", `,"payer":null`, nil},
+		{"empty", `,"payer":{}`, &PaymentPayer{}},
+		{"complete", `,"payer":{"name":"Maria Silva","documentNumber":"01234567890"}`, &PaymentPayer{Name: "Maria Silva", DocumentNumber: "01234567890"}},
+		{"name only", `,"payer":{"name":"Maria Silva"}`, &PaymentPayer{Name: "Maria Silva"}},
+		{"accented name", `,"payer":{"name":"João da Silva","documentNumber":"01234567890"}`, &PaymentPayer{Name: "João da Silva", DocumentNumber: "01234567890"}},
+		{"document only", `,"payer":{"documentNumber":"01234567890"}`, &PaymentPayer{DocumentNumber: "01234567890"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body := []byte(`{"eventId":"` + eid + `","orderType":"PAYMENT","orderNo":"P1","merchantOrderNo":"M1","status":"SUCCEEDED","amount":"100.50","paidAmount":"100.50","channelTradeNo":"E2E1"` + tc.payerJSON + `}`)
+			got, err := c.ParsePaymentWebhook(signWebhook(t, k, body, eid))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got.Payer, tc.want) {
+				t.Fatalf("payer=%+v, want %+v", got.Payer, tc.want)
+			}
+			if got.Amount != "100.50" || got.PaidAmount != "100.50" || got.ChannelTradeNo != "E2E1" {
+				t.Fatalf("existing fields changed: %+v", got)
+			}
+			if tc.want != nil && tc.want.DocumentNumber != "" {
+				r := signWebhook(t, k, body, eid)
+				r.Body = io.NopCloser(strings.NewReader(strings.Replace(string(body), "01234567890", "11234567890", 1)))
+				if _, err := c.ParsePaymentWebhook(r); err == nil {
+					t.Fatal("tampered payer must fail verification")
+				}
+			}
+		})
 	}
 }

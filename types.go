@@ -477,6 +477,13 @@ type OrderAction struct {
 	QrCode     string `json:"qrCode,omitempty"`
 }
 
+// PaymentPayer is reported by the channel, not copied from the create request.
+// It is available in authenticated payment queries and payment webhooks.
+type PaymentPayer struct {
+	Name           string `json:"name,omitempty"`
+	DocumentNumber string `json:"documentNumber,omitempty"`
+}
+
 type PaymentOrder struct {
 	OrderNo         string          `json:"orderNo"`
 	MerchantOrderNo string          `json:"merchantOrderNo"`
@@ -484,6 +491,7 @@ type PaymentOrder struct {
 	Currency        string          `json:"currency"`
 	Amount          string          `json:"amount"`
 	PaidAmount      string          `json:"paidAmount"`
+	Payer           *PaymentPayer   `json:"payer,omitempty"`
 	Country         string          `json:"country,omitempty"`
 	PaymentMethod   string          `json:"paymentMethod"`
 	Action          OrderAction     `json:"action"`

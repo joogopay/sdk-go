@@ -22,6 +22,7 @@ type PaymentWebhook struct {
 	Currency        string          `json:"currency"`
 	Amount          string          `json:"amount"`
 	PaidAmount      string          `json:"paidAmount,omitempty"`
+	Payer           *PaymentPayer   `json:"payer,omitempty"`
 	ChannelTradeNo  string          `json:"channelTradeNo,omitempty"`
 	Attach          string          `json:"attach,omitempty"`
 	Failure         *WebhookFailure `json:"failure,omitempty"`

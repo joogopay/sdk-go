@@ -109,7 +109,7 @@ var payoutMethodRules = map[string]methodRule{
 	"BRL": {codes: []string{"PIX"}, required: []string{"key", "keyType"}},
 	"CLP": {codes: []string{"BANK_TRANSFER"}, required: []string{"accountName", "accountNo", "accountType", "bankCode", "customerEmail", "customerPhone", "documentNumber", "documentType"}},
 	"COP": {codes: []string{"BANK_CARD", "BANK_TRANSFER", "BREB", "TRANSFIYA"}, required: []string{"customerEmail", "customerName", "customerPhone", "documentNumber", "documentType"}, byMethod: map[string][]string{"BANK_CARD": {"accountNo", "bankName"}, "BANK_TRANSFER": {"accountNo", "bankName"}, "BREB": {"accountNo"}}},
-	"IDR": {codes: []string{"ID_BANK_TRANSFER", "ID_DANA", "ID_GOPAY", "ID_LINKAJA", "ID_OVO", "ID_SHOPEEPAY"}, required: []string{"accountName", "bankCode", "email", "mobile"}},
+	"IDR": {codes: []string{"ID_BANK_TRANSFER", "ID_DANA", "ID_GOPAY", "ID_LINKAJA", "ID_OVO", "ID_SHOPEEPAY"}, required: []string{"accountName", "accountNo", "bankCode", "email", "mobile"}},
 	"INR": {codes: []string{"IN_IFSC", "IN_UPI"}, required: []string{"email", "mobile", "name"}, byMethod: map[string][]string{"IN_IFSC": {"account", "ifsc"}}},
 	"MXN": {codes: []string{"BANK_TRANSFER"}, required: []string{"accountName", "accountNo", "accountType", "bankCode", "bankName"}},
 	"PEN": {codes: []string{"BANK_TRANSFER", "E_WALLET"}, required: []string{"accountName", "accountNo", "bankCode", "customerEmail", "customerPhone", "documentNumber", "documentType"}, byMethod: map[string][]string{"BANK_TRANSFER": {"accountType", "cciNo"}}},

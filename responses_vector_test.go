@@ -44,6 +44,9 @@ func TestResponseVectorSuccessPaymentOrder(t *testing.T) {
 	if order.OrderNo != "ORD202605190001" {
 		t.Errorf("OrderNo = %q, want ORD202605190001", order.OrderNo)
 	}
+	if order.Payer == nil || order.Payer.Name != "Maria Silva" || order.Payer.DocumentNumber != "01234567890" {
+		t.Fatalf("payer not preserved: %+v", order.Payer)
+	}
 	if order.Status != StatusSucceeded {
 		t.Errorf("Status = %q, want %q", order.Status, StatusSucceeded)
 	}
