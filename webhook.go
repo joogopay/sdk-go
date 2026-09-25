@@ -29,6 +29,9 @@ type PaymentWebhook struct {
 }
 
 type PayoutWebhook struct {
+	RefundNo        string          `json:"refundNo,omitempty"`
+	RefundAmount    string          `json:"refundAmount,omitempty"`
+	RefundTime      int64           `json:"refundTime,omitempty"`
 	EventID         string          `json:"eventId"`
 	OrderType       string          `json:"orderType"`
 	OrderNo         string          `json:"orderNo"`

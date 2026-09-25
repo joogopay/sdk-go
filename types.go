@@ -502,6 +502,9 @@ type PaymentOrder struct {
 }
 
 type PayoutOrder struct {
+	RefundNo        string          `json:"refundNo,omitempty"`
+	RefundAmount    string          `json:"refundAmount,omitempty"`
+	RefundTime      int64           `json:"refundTime,omitempty"`
 	OrderNo         string          `json:"orderNo"`
 	MerchantOrderNo string          `json:"merchantOrderNo"`
 	Status          string          `json:"status"`

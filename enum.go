@@ -1,8 +1,7 @@
 package joogopay
 
-// Order statuses, shared by pay-in/pay-out orders, checkout and webhook payloads.
-// Query and checkout return any of the six; webhooks fire only on the four terminal
-// states (SUCCEEDED/FAILED/EXPIRED/CANCELED).
+// Public order statuses. REFUNDED applies only to a returned payout after its
+// refund has been credited; payment and checkout statuses are unchanged.
 const (
 	StatusPending    = "PENDING"
 	StatusProcessing = "PROCESSING"
@@ -10,6 +9,7 @@ const (
 	StatusFailed     = "FAILED"
 	StatusExpired    = "EXPIRED"
 	StatusCanceled   = "CANCELED"
+	StatusRefunded   = "REFUNDED"
 )
 
 // Currency codes accepted by the API; unlisted values pass through unchanged.
